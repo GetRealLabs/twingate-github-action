@@ -10,9 +10,9 @@ inputs:
   debug:
     description: 'Enable debug output'
     required: false
-    default: "false"
+    default: 'false'
 runs:
-  using: "composite"
+  using: 'composite'
   steps:
     - name: Error if unsupported runner.os
       if: runner.os != 'Linux' && runner.os != 'Windows'
@@ -25,11 +25,10 @@ runs:
       if: runner.os == 'Linux'
       shell: bash
       run: |
-        sudo apt update
-        echo "deb [trusted=yes] https://packages.twingate.com/apt/ /" | sudo tee /etc/apt/sources.list.d/twingate.list
-        sudo apt-get update -o Dir::Etc::sourcelist="sources.list.d/twingate.list" -o Dir::Etc::sourceparts="-" -o APT::Get::List-Cleanup="0"
-        sudo apt install -yq twingate
-    
+        # Download and install twingate deb directly, skipping apt repository setup
+        curl -fsSL https://binaries.twingate.com/client/linux/DEB/x86_64/stable/twingate-amd64.deb -o /tmp/twingate.deb
+        sudo dpkg -i /tmp/twingate.deb || sudo apt-get install -f -yq
+
     - name: Setup and start Twingate (Linux)
       if: runner.os == 'Linux'
       shell: bash
@@ -79,15 +78,15 @@ runs:
       if: runner.os == 'Windows'
       shell: powershell
       run: |
-          Invoke-WebRequest https://api.twingate.com/download/windows?installer=msi -OutFile .\twingate_client.msi
+        Invoke-WebRequest https://api.twingate.com/download/windows?installer=msi -OutFile .\twingate_client.msi
 
-          Set-Content .\key.json  '${{ inputs.service-key }}'
-          $key_path = (Get-Item .\key.json | Resolve-Path).ProviderPath
+        Set-Content .\key.json  '${{ inputs.service-key }}'
+        $key_path = (Get-Item .\key.json | Resolve-Path).ProviderPath
 
-          Start-Process msiexec.exe -Wait -ArgumentList "/i twingate_client.msi /l*v install.log log_level=debug service_secret=$key_path /quiet"
+        Start-Process msiexec.exe -Wait -ArgumentList "/i twingate_client.msi /l*v install.log log_level=debug service_secret=$key_path /quiet"
 
-          Start-Sleep -Seconds 1
-          Start-Service twingate.service
+        Start-Sleep -Seconds 1
+        Start-Service twingate.service
 
-          Start-Sleep -Seconds 14
-          Get-Service twingate.service
+        Start-Sleep -Seconds 14
+        Get-Service twingate.service
