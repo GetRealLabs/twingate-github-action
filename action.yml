@@ -33,6 +33,12 @@ runs:
       if: runner.os == 'Linux'
       shell: bash
       run: |
+        # `setup` does not switch networks while the client is running, and
+        # `start` is a no-op once it is online, so a second connection in the
+        # same job would report success while still attached to the previous
+        # network.
+        twingate stop >/dev/null 2>&1 || true
+
         echo '${{ inputs.service-key }}' | sudo twingate setup --headless -
         MAX_RETRIES=5
         WAIT_TIME=5
